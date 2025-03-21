@@ -1,4 +1,4 @@
 /.idea
 .env
-button_state.txt
-alert_state.txt
+simulation.json
+/__pycache__

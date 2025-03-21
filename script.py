@@ -1,26 +1,32 @@
+import json
 import pymsteams
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-BUTTON_FILE = "button_state.txt"
-STATE_FILE = "alert_state.txt"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def sendTeamsMessage(message):
+
+with open(os.path.join(BASE_DIR, "microservices.json"), "r") as json_file:
+    microservices = json.load(json_file)
+
+with open(os.path.join(BASE_DIR, "simulation.json"), "r") as json_file:
+    simulation = json.load(json_file)
+
+def sendTeamsMessage(service, item):
     try:
         response = pymsteams.connectorcard(WEBHOOK_URL)
-        response.title("Notification alerte")
+        response.title("Notification d'alerte")
 
-        if has_alert_been_actived():
+        if has_alert_been_actived(service):
             response.text("Action déjà en cours")
         else:
-            response.text(message)
-            response.addLinkButton("Clique ici", "http://localhost:5000/button_clicked")
-            mark_alert_as_actived()
-            if os.path.exists(BUTTON_FILE):
-                os.remove(BUTTON_FILE)
-
+            response.text(f"Micro service : {service} <br>"
+                          f"Message d'erreur : {item["message_error"]} <br>"
+                          f"Code : {item["status_code"]}")
+            response.addLinkButton("Marquer comme résolu", f"http://localhost:5000/button_clicked/{service}")
+            changeStatus(service, "Unhealthy")
 
         assert response.send()
 
@@ -29,24 +35,37 @@ def sendTeamsMessage(message):
     except Exception as e:
         print(f"Une erreur est survenue : {e}")
 
+def changeStatus(service, status):
+
+    microservices[service]["status"] = status
+
+    with open("microservices.json", "w") as json_file:
+        json.dump(microservices, json_file, indent=4)
+
+    print("Changement de l'alerte")
+
+
 def checkCondition():
-    valeur = 15
-    if valeur > 10:
-        sendTeamsMessage(f"Alerte : Valeur incorrecte ({valeur})")
+    index = 0
+    for service in microservices:
+        if simulation[index]['status_code'] == 200 :
+            status = "Healthy"
+            index+=1
+        else:
+            status = "Unhealthy"
+            print("Service : " + service + " || status : " + status + " || message : " + simulation[index]['message_error'])
+            item = simulation[index]
+            sendTeamsMessage(service, item)
+            index+=1
+        print(f"{service}: {status}")
 
-def has_button_been_clicked():
-    return os.path.exists(BUTTON_FILE)
-
-def mark_button_as_clicked():
-    with open(BUTTON_FILE , "w") as f:
-        f.write("clicked")
-
-def has_alert_been_actived():
-    return os.path.exists(STATE_FILE)
-
-def mark_alert_as_actived():
-    with open(STATE_FILE, "w") as f:
-        f.write("actived")
+def has_alert_been_actived(service):
+    if microservices[service]["status"] == "Unhealthy":
+        print("true")
+        return True
+    else:
+        print("false")
+        return False
 
 if __name__ == '__main__':
     checkCondition()

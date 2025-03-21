@@ -1,0 +1,56 @@
+{
+    "mail": {
+        "status": "Healthy"
+    },
+    "template": {
+        "status": "Healthy"
+    },
+    "pdf": {
+        "status": "Healthy"
+    },
+    "file": {
+        "status": "Unhealthy"
+    },
+    "auth": {
+        "status": "Healthy"
+    },
+    "admin": {
+        "status": "Healthy"
+    },
+    "bill": {
+        "status": "Healthy"
+    },
+    "btob": {
+        "status": "Healthy"
+    },
+    "car": {
+        "status": "Healthy"
+    },
+    "client": {
+        "status": "Healthy"
+    },
+    "event": {
+        "status": "Healthy"
+    },
+    "payment": {
+        "status": "Unhealthy"
+    },
+    "pte": {
+        "status": "Healthy"
+    },
+    "registry": {
+        "status": "Healthy"
+    },
+    "reservation": {
+        "status": "Healthy"
+    },
+    "resource": {
+        "status": "Healthy"
+    },
+    "stats": {
+        "status": "Healthy"
+    },
+    "accounting": {
+        "status": "Healthy"
+    }
+}

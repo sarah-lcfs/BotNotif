@@ -1,35 +1,62 @@
-from flask import Flask, Response
+import json
+
+from flask import Flask, Response, request
 import pymsteams
 import os
 from dotenv import load_dotenv
+
+from BotNotif.script import changeStatus, has_alert_been_actived
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+with open(os.path.join(BASE_DIR, "microservices.json"), "r") as json_file:
+    microservices = json.load(json_file)
 
 app = Flask(__name__)
 
 load_dotenv()
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-BUTTON_FILE  = "button_state.txt"
-STATE_FILE = "alert_state.txt"
 
-def sendTeamsMessageResponse(message):
+def sendTeamsMessageResponse(service):
     try:
         teams_message = pymsteams.connectorcard(WEBHOOK_URL)
-        teams_message.text(message)
+        teams_message.text(f"Le micro service <strong>{service}</strong> a été résolu.")
         teams_message.send()
-        print("Message envoyé sur Teams : ", message)
+        print("Message envoyé sur Teams")
     except Exception as e:
         print(f"Erreur lors de l'envoi du message Teams : {e}")
 
-@app.route('/button_clicked', methods=['GET'])
-def button_clicked():
+
+def resetStatus(service, status):
+
+    microservices_path = os.path.join(BASE_DIR, "microservices.json")
+
+    with open(microservices_path, "r") as json_file:
+        microservices = json.load(json_file)
+
+    if service in microservices:
+        microservices[service]["status"] = status
+
+        with open(microservices_path, "w", encoding="utf-8") as json_file:
+            json.dump(microservices, json_file, indent=4)
+
+        print(f"Changement de l'alerte - {service} : {microservices[service]}")
+
+    else:
+        print(f"Service {service} non trouvé.")
+
+
+@app.route('/button_clicked/<service>', methods=['GET'])
+def button_clicked(service):
     print("OK")
 
-    if os.path.exists(BUTTON_FILE):
-        sendTeamsMessageResponse("Ce bouton a déjà été utilisé. Action refusée")
+    if has_alert_been_actived(service) == False:
+        teams_message = pymsteams.connectorcard(WEBHOOK_URL)
+        teams_message.text("Ce bouton a déjà été utilisé. Action refusée")
+        teams_message.send()
     else:
-        sendTeamsMessageResponse("Bouton cliqué ! Action enregistrée")
-        with open(BUTTON_FILE, "w") as f:
-            f.write("clicked")
-        os.remove(STATE_FILE)
+        sendTeamsMessageResponse(service)
+        resetStatus(service, "Healthy")
 
     return Response('<script>window.close();</script>', mimetype='text/html')
 
