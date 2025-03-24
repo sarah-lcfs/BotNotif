@@ -9,7 +9,7 @@
         "status": "Healthy"
     },
     "file": {
-        "status": "Unhealthy"
+        "status": "Healthy"
     },
     "auth": {
         "status": "Healthy"
@@ -33,7 +33,7 @@
         "status": "Healthy"
     },
     "payment": {
-        "status": "Unhealthy"
+        "status": "Healthy"
     },
     "pte": {
         "status": "Healthy"
