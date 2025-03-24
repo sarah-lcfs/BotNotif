@@ -22,19 +22,18 @@ ENVIRONMENTS = {
 }
 
 # Check arguments
-#if len(sys.argv) != 2 or sys.argv[1] not in ENVIRONMENTS:
-#    print("Usage: python check_ms.py <environment>")
- #   print("Possible values for <environment>: prod, preprod, dev")
- #   sys.exit(1)
+if len(sys.argv) != 2 or sys.argv[1] not in ENVIRONMENTS:
+    print("Usage: python check_ms.py <environment>")
+    print("Possible values for <environment>: prod, preprod, dev")
+    sys.exit(1)
 
-#BASE_ADDRESS = ENVIRONMENTS[sys.argv[1]]
+BASE_ADDRESS = ENVIRONMENTS[sys.argv[1]]
 
 # Actuator health endpoint path template
 HEALTH_ENDPOINT_TEMPLATE = "/{}/actuator/health"
 
 # JSON file paths
 MICROSERVICES_FILE = os.path.join(BASE_DIR, "microservices.json")
-SIMULATION_FILE = os.path.join(BASE_DIR, "simulation.json")
 
 # Checking and loading JSON files
 def load_json(file_path):
@@ -47,7 +46,6 @@ def load_json(file_path):
 
 # Loading data
 microservices = load_json(MICROSERVICES_FILE)
-response = load_json(SIMULATION_FILE)
 
 def send_teams_message(service, response_code, response_text, status):
     """ Sends an alert to Teams based on the microservice status """
@@ -94,33 +92,40 @@ def check_health():
     """ Checks the status of microservices and triggers an alert if necessary """
 
     environment_broken = False
-    index=0
+    current_status_env = True
 
     for service in microservices:
-        #health_url = BASE_ADDRESS + HEALTH_ENDPOINT_TEMPLATE.format(service)
+        health_url = BASE_ADDRESS + HEALTH_ENDPOINT_TEMPLATE.format(service)
         current_status = microservices[service]["status"]
-        index += 1
+
         try:
-            #response = requests.get(health_url, verify=False)
-            if response[index]['status_code'] == 200 and response[index]['text'] == "-":
+            response = requests.get(health_url, verify=False)
+            if response.status_code == 200 and response.text == "{\"status\":\"UP\"}":
                 status = "Healthy"
             else:
                 status = "Unhealthy"
                 environment_broken = True
-            response_code = response[index]['status_code']
-            response_text = response[index]['text']
+
+            response_code = response.status_code
+            response_text = response.text
+
             if current_status != status:
                 print(f"{service}: Change detected → {status}")
                 send_teams_message(service, response_code, response_text, status)
+                current_status_env = False
+
         except requests.exceptions.RequestException as e:
             status = f"Error ({str(e)})"
             environment_broken = True
+
         print(f"{service}: {status}")
 
-    if environment_broken:
-        print("\033[91mEnvironment is BROKEN!\033[0m")  # Red message
-    else:
-        print("\033[92mEnvironment is WORKING fine!\033[0m")  # Green message
+    if current_status_env:
+        send_teams_message()
+        if environment_broken:
+            print("\033[91mEnvironment is BROKEN!\033[0m")  # Red message
+        else:
+            print("\033[92mEnvironment is WORKING fine!\033[0m")  # Green message
 
 def is_alert_active(service, status):
     """ Checks if an alert is already active to avoid duplicates """

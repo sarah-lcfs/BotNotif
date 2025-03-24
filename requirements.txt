@@ -1,0 +1,4 @@
+pymsteams
+python-dotenv
+requests
+urllib3
